@@ -38,15 +38,25 @@ function GetWeather()
   return tf, h, p
 end
 
-function GetTimeAndWeather()
+function GetTimeAndWeatherString()
   tf, h, p = GetWeather()
   return string.format("%s T=%.2f H=%.2f P=%.2f", GetTime(), tf, h, p)
+end
+
+function GetTimeAndWeatherJSON()
+  tf, h, p = GetWeather()
+  results = {}
+  results["time"] = GetTime()
+  results["temp"] = tf
+  results["humid"] = h
+  results["press"] = p
+  return cjson.encode(results)
 end
 
 function StartWeatherTimer()
   sensorTimer=tmr.create()
   tmr.alarm(sensorTimer, SENSOR_DELAY, 1, function()
-    print(GetTimeAndWeather())
+    print(GetTimeAndWeatherJSON())
   end)
 end
 
@@ -69,6 +79,10 @@ function Main()
 end
 
 function quit()
-  tmr.unregister(wifiTimer)
-  tmr.stop(sensorTimer)
+  if (wifiTimer ~= nil and tmr.state(wifiTimer) ~= nil) then
+    tmr.unregister(wifiTimer)
+  end
+  if (sensorTimer ~= nil and tmr.state(sensorTimer) ~= nil) then
+    tmr.stop(sensorTimer)
+  end
 end
