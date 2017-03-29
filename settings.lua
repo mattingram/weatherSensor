@@ -1,0 +1,18 @@
+SSID="ssid"
+PASSWORD="password"
+
+URL="http://10.0.0.20:5000/api/weather"
+
+READING_INTERVAL_IN_SECONDS=3
+
+-- Map PCB for Arduino to NodeMCU/Lua
+GPIO0 = 3
+GPIO2 = 4
+GPIO5 = 1
+GPIO4 = 2
+SCL = GPIO5
+SDA = GPIO4
+REDLED = GPIO0
+BLUELED = GPIO2
+ON = gpio.LOW
+OFF = gpio.HIGH

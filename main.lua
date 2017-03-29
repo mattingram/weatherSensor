@@ -1,24 +1,8 @@
--- Map PCB for Arduino to NodeMCU/Lua
-GPIO0 = 3
-GPIO2 = 4
-GPIO5 = 1
-GPIO4 = 2
-SCL = GPIO5
-SDA = GPIO4
-REDLED = GPIO0
-BLUELED = GPIO2
-
-SENSOR_DELAY=1000
-
-URL="http://10.0.0.20:5000/api/weather"
-
 -- Require modules
 bme280=require("bme280")
 dht=require("dht")
 
 -- Init hardware
-gpio.mode(REDLED, gpio.OUTPUT)
-gpio.mode(BLUELED, gpio.OUTPUT)
 bme280.init(SDA,SCL)
 
 function GetDateTime()
@@ -57,7 +41,7 @@ end
 
 function SendToCloud(weatherData)
   http.post(URL,
-    'Content-Type: application/json\r\n',
+    'Content-Type: application/json\r\nContent-Length: ' .. string.len(weatherData),
     weatherData,
     function(code, data)
       if (code < 0) then
@@ -70,36 +54,24 @@ end
 
 function StartWeatherTimer()
   sensorTimer=tmr.create()
-  tmr.alarm(sensorTimer, SENSOR_DELAY, 1, function()
+  tmr.alarm(sensorTimer, READING_INTERVAL_IN_SECONDS*1000, 1, function()
     weatherData = GetTimeAndWeatherJSON()
     print(weatherData)
     SendToCloud(weatherData)
+    BlinkLED(BLUELED)
   end)
 end
 
-function Main()
-  -- Check to see if IP Address has been assigned
-  -- once assigned, start reading weather
-  wifiTimer=tmr.create()
-  tmr.alarm(wifiTimer, 1000, 1, function()
-    if wifi.sta.getip() == nil then
-      gpio.write(REDLED, gpio.LOW)
-      print("Connecting to AP...")
-      gpio.write(REDLED, gpio.HIGH)
-    else
-      tmr.unregister(wifiTimer)
-      print('IP: ',wifi.sta.getip())
-      -- synchronize time and start reading sensor
-      sntp.sync(nil, StartWeatherTimer, StartWeatherTimer)
-    end
-  end)
+function main()
+  -- synchronize time and start reading sensor
+  sntp.sync(nil, StartWeatherTimer, StartWeatherTimer)
 end
 
 function quit()
-  if (wifiTimer ~= nil and tmr.state(wifiTimer) ~= nil) then
-    tmr.unregister(wifiTimer)
-  end
   if (sensorTimer ~= nil and tmr.state(sensorTimer) ~= nil) then
     tmr.stop(sensorTimer)
   end
 end
+
+-- run it!
+main()
