@@ -10,6 +10,8 @@ BLUELED = GPIO2
 
 SENSOR_DELAY=1000
 
+URL="http://10.0.0.20:5000/api/weather"
+
 -- Require modules
 bme280=require("bme280")
 dht=require("dht")
@@ -19,9 +21,9 @@ gpio.mode(REDLED, gpio.OUTPUT)
 gpio.mode(BLUELED, gpio.OUTPUT)
 bme280.init(SDA,SCL)
 
-function GetTime()
+function GetDateTime()
   tm = rtctime.epoch2cal(rtctime.get())
-  return string.format("%02d:%02d:%02d", tm["hour"], tm["min"], tm["sec"])
+  return string.format("%04d-%02d-%02dT%02d:%02d:%02dZ", tm["year"], tm["mon"], tm["day"], tm["hour"], tm["min"], tm["sec"])
 end
 
 function CelciusToF(celcius)
@@ -40,23 +42,38 @@ end
 
 function GetTimeAndWeatherString()
   tf, h, p = GetWeather()
-  return string.format("%s T=%.2f H=%.2f P=%.2f", GetTime(), tf, h, p)
+  return string.format("%s T=%.2f H=%.2f P=%.2f", GetDateTime(), tf, h, p)
 end
 
 function GetTimeAndWeatherJSON()
   tf, h, p = GetWeather()
   results = {}
-  results["time"] = GetTime()
+  results["time"] = GetDateTime()
   results["temp"] = tf
   results["humid"] = h
   results["press"] = p
   return cjson.encode(results)
 end
 
+function SendToCloud(weatherData)
+  http.post(URL,
+    'Content-Type: application/json\r\n',
+    weatherData,
+    function(code, data)
+      if (code < 0) then
+        print("HTTP request failed")
+      else
+        print(code, data)
+      end
+    end)
+end
+
 function StartWeatherTimer()
   sensorTimer=tmr.create()
   tmr.alarm(sensorTimer, SENSOR_DELAY, 1, function()
-    print(GetTimeAndWeatherJSON())
+    weatherData = GetTimeAndWeatherJSON()
+    print(weatherData)
+    SendToCloud(weatherData)
   end)
 end
 
