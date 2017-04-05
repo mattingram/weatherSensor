@@ -1,6 +1,6 @@
 # WeatherSensor
 
-## BME280 weather sensor hooked up to an ESP8266 (AdaFruit Feather HUZZAH) with wifi running NodeMCU/Lua that sends JSON weather data with current time to a web service
+## BME280 weather sensor hooked up to an ESP8266 (AdaFruit Feather HUZZAH) with wifi running NodeMCU/Lua that sends JSON weather data with current time to a web service and writes data to a local file.
 
 > Note: GPIO pins and LEDs are mapped from PCB/Arduino to NodeMCU/Lua
 
@@ -15,10 +15,14 @@
 ## How to load files
 
 1. Install [luatool.py](https://github.com/4refr0nt/luatool)
+  * OR install [nodemcu.js](https://www.npmjs.com/package/nodemcu-tool)
 2. Copy files to ESP8266
   * luatool.py --port /dev/cu.SLAB_USBtoUART -f settings.lua
-  * luatool.py --port /dev/cu.SLAB_USBtoUART -f init.lua
+  * luatool.py --port /dev/cu.SLAB_USBtoUART -f init.lua -t inittest.lua
   * luatool.py --port /dev/cu.SLAB_USBtoUART -f main.lua
+3. Download files from the ESP8266
+  * nodemcu-tool download --port=/dev/cu.SLAB_USBtoUART data.csv
+
 
 ## How to connect using terminal:
 

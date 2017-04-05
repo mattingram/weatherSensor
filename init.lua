@@ -1,5 +1,9 @@
-dofile('settings.lua')
 STARTED = 0
+
+dofile('settings.lua')
+if file.open("settings.lua") ~= nil then
+    file.close("settings.lua")
+end
 
 if (IS_DST) then
   TIMEZONE_OFFSET=TIMEZONE_OFFSET+1

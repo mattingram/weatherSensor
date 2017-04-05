@@ -60,11 +60,17 @@ function SendToCloud(time, tf, h, p)
   end
 end
 
-function WriteToFile(time, tf, h, p)
-  print(FormatTimeAndWeatherToString(time, tf, h, p))
+function WriteToFile(output)
+  if file.open("data.csv", "a+") then
+    file.writeline(output)
+    file.close()
+  end
 end
 
 function StartWeatherTimer()
+  if (file.exists("data.csv") == false) then
+    WriteToFile(FormatDateTime(Now()))
+  end
   if (sensorTimer == nil) then
     sensorTimer=tmr.create()
   end
@@ -80,7 +86,7 @@ function StartWeatherTimer()
       time = Now()
 
       SendToCloud(time, tf, h, p)
-      WriteToFile(time, tf, h, p)
+      WriteToFile(FormatTimeAndWeatherToString(time, tf, h, p))
 
       SetLED(REDLED, OFF)
       SetLED(BLUELED, OFF)
@@ -95,7 +101,7 @@ function quit()
 end
 
 wifi.eventmon.register(wifi.eventmon.STA_GOT_IP, function(T)
-  sntp.sync(nil, print(string.format("SNTP synced to %s", FormatDateTime(Now()))), print("SNTP sync error"))
+  sntp.sync(nil, print(string.format("SNTP synced to %s", FormatDateTime(Now()))))
 end)
 
 -- main start. synchronize time (if we have wifi)
