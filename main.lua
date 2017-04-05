@@ -11,29 +11,25 @@ function Now()
   return tm
 end
 
-function Time(tm)
+function FormatTime(tm)
   return string.format("%02d:%02d:%02d", tm["hour"], tm["min"], tm["sec"])
 end
 
-function DateTime(tm)
+function FormatDateTime(tm)
   return string.format("%04d-%02d-%02dT%02d:%02d:%02dZ", tm["year"], tm["mon"], tm["day"], tm["hour"], tm["min"], tm["sec"])
 end
 
-function TimeAndWeatherToString(time, tf, h, p)
-  return string.format("%s T=%.2f H=%.2f P=%.2f", Time(time), tf, h, p)
+function FormatTimeAndWeatherToString(time, tf, h, p)
+  return string.format("%s T=%.2f H=%.2f P=%.2f", FormatTime(time), tf, h, p)
 end
 
-function TimeAndWeatherToJSON(time, tf, h, p)
+function FormatTimeAndWeatherToJSON(time, tf, h, p)
   results = {}
-  results["time"] = DateTime(time)
+  results["time"] = FormatDateTime(time)
   results["temp"] = tf
   results["humid"] = h
   results["press"] = p
   return cjson.encode(results)
-end
-
-function CelciusToF(celcius)
-  return celcius*(9/5)+32
 end
 
 --returns Temp (F), humidity, pressure
@@ -42,13 +38,13 @@ function GetWeather()
   tc = tc / 100
   p = p / 1000
   h = h / 1000
-  tf = CelciusToF(tc)
+  tf = tc*(9/5)+32 -- convert celcius to fahrenheit
   return tf, h, p
 end
 
 function SendToCloud(time, tf, h, p)
-  if (wifi.sta.getip() ~= nil) then
-    weatherData = TimeAndWeatherToJSON(time, tf, h, p)
+  if (wifi.sta.status() == wifi.STA_GOTIP) then
+    weatherData = FormatTimeAndWeatherToJSON(time, tf, h, p)
     print(weatherData)
     http.post(URL,
       'Content-Type: application/json\r\nContent-Length: ' .. string.len(weatherData),
@@ -64,28 +60,48 @@ function SendToCloud(time, tf, h, p)
   end
 end
 
-function StartWeatherTimer()
-  sensorTimer=tmr.create()
-  tmr.alarm(sensorTimer, READING_INTERVAL_IN_SECONDS*1000, 1, function()
-    SetLED(BLUELED, ON)
-    tf, h, p = GetWeather()
-    time = Now()
-    SendToCloud(time, tf, h, p)
-    print(TimeAndWeatherToString(time, tf, h, p))
-    SetLED(BLUELED, OFF)
-  end)
+function WriteToFile(time, tf, h, p)
+  print(FormatTimeAndWeatherToString(time, tf, h, p))
 end
 
-function main()
-  -- synchronize time and start reading sensor
-  sntp.sync(nil, StartWeatherTimer, StartWeatherTimer)
+function StartWeatherTimer()
+  if (sensorTimer == nil) then
+    sensorTimer=tmr.create()
+  end
+  if (tmr.state(sensorTimer) == nil) then
+    tmr.alarm(sensorTimer, READING_INTERVAL_IN_SECONDS*1000, 1, function()
+      if (wifi.sta.status() == wifi.STA_GOTIP) then
+        SetLED(BLUELED, ON)
+      else
+        SetLED(REDLED, ON)
+      end
+
+      tf, h, p = GetWeather()
+      time = Now()
+
+      SendToCloud(time, tf, h, p)
+      WriteToFile(time, tf, h, p)
+
+      SetLED(REDLED, OFF)
+      SetLED(BLUELED, OFF)
+    end)
+  end
 end
 
 function quit()
   if (sensorTimer ~= nil and tmr.state(sensorTimer) ~= nil) then
-    tmr.stop(sensorTimer)
+    tmr.unregister(sensorTimer)
   end
 end
 
--- run it!
-main()
+wifi.eventmon.register(wifi.eventmon.STA_GOT_IP, function(T)
+  sntp.sync(nil, print(string.format("SNTP synced to %s", FormatDateTime(Now()))), print("SNTP sync error"))
+end)
+
+-- main start. synchronize time (if we have wifi)
+-- start reading weather sensor regardless of whether we have wifi or time sync fails
+if (wifi.sta.status() == wifi.STA_GOTIP) then
+  sntp.sync(nil, StartWeatherTimer, StartWeatherTimer)
+else
+  StartWeatherTimer()
+end

@@ -4,6 +4,7 @@ STARTED = 0
 if (IS_DST) then
   TIMEZONE_OFFSET=TIMEZONE_OFFSET+1
 end
+rtctime.set(DEFAULT_TIME, 0)
 
 function SetLED(led, state)
   if led ~= nil and (state == 0 or state == 1) then
@@ -24,15 +25,17 @@ function startup()
   if (wifiTimer ~= nil and tmr.state(wifiTimer) ~= nil) then
     tmr.unregister(wifiTimer)
   end
-  SetLED(BLUELED, ON)
   if (wifi.sta.getip() == nil) then
+    SetLED(REDLED, ON)
     print("No wifi connection")
   else
+    SetLED(BLUELED, ON)
     print("WiFi connection established, IP address: " .. wifi.sta.getip())
   end
   print("You have 5 seconds to abort")
   print("Waiting...")
   tmr.create():alarm(5000, tmr.ALARM_SINGLE, function()
+    SetLED(REDLED, OFF)
     SetLED(BLUELED, OFF)
     if file.open("init.lua") ~= nil then
         file.close("init.lua")
@@ -51,7 +54,6 @@ wifi.sta.config(SSID, PASSWORD)
 wifiTimer=tmr.create()
 tmr.alarm(wifiTimer, 1000, tmr.ALARM_AUTO, function(wifiTimer)
   if wifi.sta.getip() == nil then
-    print("Waiting for IP address...")
     BlinkLED(REDLED)
   else
     startup()
