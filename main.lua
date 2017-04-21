@@ -47,7 +47,7 @@ function SendToCloud(time, tf, h, p)
     weatherData = FormatTimeAndWeatherToJSON(time, tf, h, p)
     print(weatherData)
     http.post(URL,
-      'Content-Type: application/json\r\nContent-Length: ' .. string.len(weatherData),
+      'Content-Type: application/json\r\n',
       weatherData,
       function(code, data)
         if (code < 0) then
